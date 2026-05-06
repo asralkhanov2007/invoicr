@@ -4,6 +4,10 @@
 
 {% block header_action %}
 <div class="flex gap-2">
+  <a href="{% url 'invoice_pdf' invoice.pk %}"
+     class="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700">
+    ↓ Download PDF
+  </a>
   <a href="{% url 'invoice_edit' invoice.pk %}"
      class="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">
     Edit

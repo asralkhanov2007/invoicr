@@ -4,7 +4,10 @@ from django.contrib import messages
 from clients.models import Client
 from .models import Invoice, InvoiceItem
 from decimal import Decimal, InvalidOperation
-import json
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+import json, weasyprint
+
 
 # Create your views here.
 
@@ -32,7 +35,7 @@ def invoice_create(request):
 @login_required
 def invoice_detail(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk, owner=request.user)
-    return render(request, 'invocies/detail.html', {'invoice': invoice})
+    return render(request, 'invoices/detail.html', {'invoice': invoice})
 
 @login_required
 def invoice_edit(request, pk):
@@ -133,3 +136,21 @@ def _save_invoice(request, invoice, clients):
 
         messages.success(request, f'Invoice {invoice.number} save.')
         return redirect('invoice_detail', pk=invoice.pk)
+    
+@login_required
+def invoice_pdf(request,pk):
+    invoice = get_object_or_404(Invoice, pk=pk, owner=request.user)
+
+    html_string = render_to_string('invoices/pdf.html', {
+        'invoice':invoice,
+    })
+
+    pdf_file = weasyprint.HTML(
+        string=html_string,
+        base_url=request.build_absolute_uri('/')
+    ).write_pdf()
+
+    response = HttpResponse(pdf_file, content_type = 'appliacton/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice-{invoice.number}.pdf"'
+    return response
+
