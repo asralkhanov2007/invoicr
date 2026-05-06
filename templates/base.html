@@ -63,7 +63,7 @@
   </aside>
 
   <!-- Main content -->
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
     <header class="h-16 bg-white border-b border-gray-200 flex items-center px-6 flex-shrink-0">
       <h1 class="text-base font-medium text-gray-800">{% block page_title %}{% endblock %}</h1>
       <div class="ml-auto">{% block header_action %}{% endblock %}</div>
@@ -82,7 +82,7 @@
       </div>
     {% endif %}
 
-    <main class="flex-1 overflow-y-auto p-6">
+    <main class="flex-1 overflow-y-auto p-6 max-w-7xl">
       {% block content %}{% endblock %}
     </main>
   </div>
