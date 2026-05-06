@@ -6,12 +6,17 @@ from .models import Invoice, InvoiceItem
 from decimal import Decimal, InvalidOperation
 from django.http import HttpResponse
 from django.template.loader import render_to_string
-import json, weasyprint
 import stripe
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 
 
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+import io
 # Create your views here.
 
 @login_required
@@ -139,24 +144,141 @@ def _save_invoice(request, invoice, clients):
 
         messages.success(request, f'Invoice {invoice.number} save.')
         return redirect('invoice_detail', pk=invoice.pk)
-    
+
 @login_required
-def invoice_pdf(request,pk):
+def invoice_pdf(request, pk):
     invoice = get_object_or_404(Invoice, pk=pk, owner=request.user)
 
-    html_string = render_to_string('invoices/pdf.html', {
-        'invoice':invoice,
-    })
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            rightMargin=2*cm, leftMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
 
-    pdf_file = weasyprint.HTML(
-        string=html_string,
-        base_url=request.build_absolute_uri('/')
-    ).write_pdf()
+    styles = getSampleStyleSheet()
+    blue   = colors.HexColor('#2563eb')
+    gray   = colors.HexColor('#6b7280')
+    dark   = colors.HexColor('#1a1a1a')
 
-    response = HttpResponse(pdf_file, content_type = 'appliacton/pdf')
+    title_style = ParagraphStyle('title', fontSize=22, textColor=blue, fontName='Helvetica-Bold')
+    label_style = ParagraphStyle('label', fontSize=9,  textColor=gray, fontName='Helvetica')
+    body_style  = ParagraphStyle('body',  fontSize=11, textColor=dark, fontName='Helvetica')
+    bold_style  = ParagraphStyle('bold',  fontSize=11, textColor=dark, fontName='Helvetica-Bold')
+
+    elements = []
+
+    # Header
+    header_data = [[
+        Paragraph('Invoicr', title_style),
+        Paragraph(f'<font color="#6b7280" size="9">INVOICE</font><br/>'
+                  f'<b>{invoice.number}</b><br/>'
+                  f'<font color="#6b7280" size="9">{invoice.get_status_display().upper()}</font>', body_style)
+    ]]
+    header_table = Table(header_data, colWidths=[9*cm, 8*cm])
+    header_table.setStyle(TableStyle([
+        ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LINEBELOW', (0,0), (-1,0), 1.5, blue),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 12),
+    ]))
+    elements.append(header_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Bill to / issued by
+    billed_to = f'''<font color="#9ca3af" size="9">BILLED TO</font><br/>
+        <b>{invoice.client.name}</b><br/>
+        {invoice.client.company_name + "<br/>" if invoice.client.company_name else ""}
+        {invoice.client.email + "<br/>" if invoice.client.email else ""}
+        {invoice.client.phone if invoice.client.phone else ""}'''
+
+    issued_by = f'''<font color="#9ca3af" size="9">ISSUED BY</font><br/>
+        <b>{invoice.owner.get_full_name() or invoice.owner.username}</b><br/>
+        {invoice.owner.email}'''
+
+    parties_data = [[Paragraph(billed_to, body_style), Paragraph(issued_by, body_style)]]
+    parties_table = Table(parties_data, colWidths=[9*cm, 8*cm])
+    parties_table.setStyle(TableStyle([
+        ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f9fafb')),
+        ('ROUNDEDCORNERS', [4, 4, 4, 4]),
+        ('PADDING', (0,0), (-1,-1), 10),
+    ]))
+    elements.append(parties_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Dates
+    dates_data = [[
+        Paragraph(f'<font color="#9ca3af" size="9">ISSUE DATE</font><br/>{invoice.issue_date}', body_style),
+        Paragraph(f'<font color="#9ca3af" size="9">DUE DATE</font><br/>{invoice.due_date}', body_style),
+        Paragraph(f'<font color="#9ca3af" size="9">PAYMENT TERMS</font><br/>{invoice.payment_terms}', body_style),
+    ]]
+    dates_table = Table(dates_data, colWidths=[5.67*cm, 5.67*cm, 5.67*cm])
+    dates_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f9fafb')),
+        ('PADDING', (0,0), (-1,-1), 10),
+    ]))
+    elements.append(dates_table)
+    elements.append(Spacer(1, 0.5*cm))
+
+    # Line items table
+    items_data = [['Description', 'Qty', 'Unit Price', 'Total']]
+    for item in invoice.items.all():
+        items_data.append([
+            item.description,
+            str(item.quantity),
+            f'${item.unit_price}',
+            f'${item.line_total}',
+        ])
+
+    items_table = Table(items_data, colWidths=[9*cm, 2*cm, 3*cm, 3*cm])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0), (-1,0),  colors.HexColor('#f9fafb')),
+        ('TEXTCOLOR',    (0,0), (-1,0),  gray),
+        ('FONTNAME',     (0,0), (-1,0),  'Helvetica-Bold'),
+        ('FONTSIZE',     (0,0), (-1,0),  9),
+        ('ALIGN',        (1,0), (-1,-1), 'RIGHT'),
+        ('FONTNAME',     (0,1), (-1,-1), 'Helvetica'),
+        ('FONTSIZE',     (0,1), (-1,-1), 10),
+        ('ROWBACKGROUNDS',(0,1),(-1,-1), [colors.white, colors.HexColor('#f9fafb')]),
+        ('GRID',         (0,0), (-1,0),  0.5, colors.HexColor('#e5e7eb')),
+        ('LINEBELOW',    (0,-1),(-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+        ('PADDING',      (0,0), (-1,-1), 8),
+    ]))
+    elements.append(items_table)
+    elements.append(Spacer(1, 0.3*cm))
+
+    # Totals
+    totals_data = [
+        ['', 'Subtotal', f'${invoice.subtotal}'],
+    ]
+    if invoice.tax_rate:
+        totals_data.append(['', f'Tax ({invoice.tax_rate}%)', f'${invoice.tax_amount}'])
+    totals_data.append(['', 'Total Due', f'${invoice.total}'])
+
+    totals_table = Table(totals_data, colWidths=[9*cm, 4*cm, 4*cm])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN',     (1,0), (-1,-1), 'RIGHT'),
+        ('FONTNAME',  (0,-1),(-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE',  (0,-1),(-1,-1), 12),
+        ('LINEABOVE', (1,-1),(-1,-1), 1.5, dark),
+        ('TOPPADDING',(0,-1),(-1,-1), 8),
+        ('PADDING',   (0,0), (-1,-1), 4),
+    ]))
+    elements.append(totals_table)
+
+    # Notes
+    if invoice.notes:
+        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph('<font color="#9ca3af" size="9">NOTES</font>', label_style))
+        elements.append(Paragraph(invoice.notes, body_style))
+
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="invoice-{invoice.number}.pdf"'
     return response
-
 
 @login_required
 def invoice_checkout(request, pk):
