@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Invoices — Invoicr{% endblock %}
+{% block page_title %}Invoices{% endblock %}
+
+{% block header_action %}
+  <a href="{% url 'invoice_create' %}"
+     class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">
+    + New Invoice
+  </a>
+{% endblock %}
+
+{% block content %}
+<!-- Status filter tabs -->
+<div class="flex gap-2 mb-4">
+  <a href="{% url 'invoice_list' %}"
+     class="text-xs px-3 py-1.5 rounded-lg border
+            {% if not status_filter %}bg-blue-600 text-white border-blue-600{% else %}border-gray-300 text-gray-600 hover:bg-gray-50{% endif %}">
+    All
+  </a>
+  {% for val, label in statuses %}
+  <a href="?status={{ val }}"
+     class="text-xs px-3 py-1.5 rounded-lg border
+            {% if status_filter == val %}bg-blue-600 text-white border-blue-600{% else %}border-gray-300 text-gray-600 hover:bg-gray-50{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if invoices %}
+<div class="bg-white rounded-xl border border-gray-200">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Number</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Client</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Status</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Issue Date</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Due Date</th>
+        <th class="text-right px-6 py-3 text-xs text-gray-500 font-medium">Total</th>
+        <th class="px-6 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for inv in invoices %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-3">
+          <a href="{% url 'invoice_detail' inv.pk %}" class="text-blue-600 hover:underline font-medium">{{ inv.number }}</a>
+        </td>
+        <td class="px-6 py-3 text-gray-700">{{ inv.client.name }}</td>
+        <td class="px-6 py-3">
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium
+            {% if inv.status == 'paid' %}bg-green-100 text-green-700
+            {% elif inv.status == 'overdue' %}bg-red-100 text-red-700
+            {% elif inv.status == 'sent' %}bg-blue-100 text-blue-700
+            {% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ inv.get_status_display }}
+          </span>
+        </td>
+        <td class="px-6 py-3 text-gray-600">{{ inv.issue_date }}</td>
+        <td class="px-6 py-3 text-gray-600">{{ inv.due_date }}</td>
+        <td class="px-6 py-3 text-right font-medium">${{ inv.total }}</td>
+        <td class="px-6 py-3 text-right">
+          <a href="{% url 'invoice_edit' inv.pk %}" class="text-xs text-gray-500 hover:text-gray-800 mr-3">Edit</a>
+          <a href="{% url 'invoice_delete' inv.pk %}" class="text-xs text-red-500 hover:text-red-700">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-200 px-6 py-16 text-center text-gray-400 text-sm">
+  No invoices found.
+  <a href="{% url 'invoice_create' %}" class="text-blue-600 hover:underline">Create your first invoice →</a>
+</div>
+{% endif %}
+{% endblock %}

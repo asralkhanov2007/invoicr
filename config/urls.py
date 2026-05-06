@@ -16,12 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
-    path('dashboard/', login_required(lambda r: HttpResponse('Dashboard coding soon')), name='dashboard'),
-
+    path('',include('clients.urls')),
+    path('',include('invoices.urls')),
 ]

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}{{ client.name }} — Invoicr{% endblock %}
+{% block page_title %}{{ client.name }}{% endblock %}
+
+{% block header_action %}
+  <a href="{% url 'client_edit' client.pk %}"
+     class="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50">
+    Edit Client
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-3 gap-6">
+  <div class="col-span-1">
+    <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-3 text-sm">
+      {% if client.company_name %}
+      <div><p class="text-xs text-gray-400">Company</p><p class="text-gray-800">{{ client.company_name }}</p></div>
+      {% endif %}
+      {% if client.email %}
+      <div><p class="text-xs text-gray-400">Email</p><p class="text-gray-800">{{ client.email }}</p></div>
+      {% endif %}
+      {% if client.phone %}
+      <div><p class="text-xs text-gray-400">Phone</p><p class="text-gray-800">{{ client.phone }}</p></div>
+      {% endif %}
+      {% if client.address %}
+      <div><p class="text-xs text-gray-400">Address</p><p class="text-gray-800 whitespace-pre-line">{{ client.address }}</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-span-2">
+    <div class="bg-white rounded-xl border border-gray-200">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <h2 class="text-sm font-medium">Invoices</h2>
+        <a href="{% url 'invoice_create' %}"
+           class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">
+          + New Invoice
+        </a>
+      </div>
+      {% if invoices %}
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Number</th>
+            <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Status</th>
+            <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Due</th>
+            <th class="text-right px-6 py-3 text-xs text-gray-500 font-medium">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for inv in invoices %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-3">
+              <a href="{% url 'invoice_detail' inv.pk %}" class="text-blue-600 hover:underline">{{ inv.number }}</a>
+            </td>
+            <td class="px-6 py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                {% if inv.status == 'paid' %}bg-green-100 text-green-700
+                {% elif inv.status == 'overdue' %}bg-red-100 text-red-700
+                {% elif inv.status == 'sent' %}bg-blue-100 text-blue-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ inv.get_status_display }}
+              </span>
+            </td>
+            <td class="px-6 py-3 text-gray-600">{{ inv.due_date }}</td>
+            <td class="px-6 py-3 text-right font-medium">${{ inv.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="px-6 py-8 text-sm text-gray-400 text-center">No invoices for this client yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

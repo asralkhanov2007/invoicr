@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Client — Invoicr{% endblock %}
+{% block page_title %}{{ action }} Client{% endblock %}
+
+{% block content %}
+<div class="max-w-xl bg-white rounded-xl border border-gray-200 p-6">
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% for field_name, label, type, required in field_list|default:'' %}{% endfor %}
+
+    {% for field_name, label, input_type in field_configs %}{% endfor %}
+
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Name <span class="text-red-500">*</span></label>
+      <input type="text" name="name" value="{{ client.name|default:'' }}"
+             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required/>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Company Name</label>
+      <input type="text" name="company_name" value="{{ client.company_name|default:'' }}"
+             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
+        <input type="email" name="email" value="{{ client.email|default:'' }}"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+        <input type="text" name="phone" value="{{ client.phone|default:'' }}"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Address</label>
+      <textarea name="address" rows="2"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ client.address|default:'' }}</textarea>
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+      <textarea name="notes" rows="2"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ client.notes|default:'' }}</textarea>
+    </div>
+
+    <div class="flex gap-3 pt-2">
+      <button type="submit"
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+        {{ action }} Client
+      </button>
+      <a href="{% url 'client_list' %}"
+         class="px-4 py-2 rounded-lg text-sm text-gray-600 border border-gray-300 hover:bg-gray-50">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

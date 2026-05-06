@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Clients — Invoicr{% endblock %}
+{% block page_title %}Clients{% endblock %}
+
+{% block header_action %}
+  <a href="{% url 'client_create' %}"
+     class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">
+    + New Client
+  </a>
+{% endblock %}
+
+{% block content %}
+{% if clients %}
+<div class="bg-white rounded-xl border border-gray-200">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Name</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Company</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Email</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Phone</th>
+        <th class="text-left px-6 py-3 text-xs text-gray-500 font-medium">Invoices</th>
+        <th class="px-6 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for client in clients %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-3 font-medium">
+          <a href="{% url 'client_detail' client.pk %}" class="text-blue-600 hover:underline">{{ client.name }}</a>
+        </td>
+        <td class="px-6 py-3 text-gray-600">{{ client.company_name|default:"—" }}</td>
+        <td class="px-6 py-3 text-gray-600">{{ client.email|default:"—" }}</td>
+        <td class="px-6 py-3 text-gray-600">{{ client.phone|default:"—" }}</td>
+        <td class="px-6 py-3 text-gray-600">{{ client.invoice_count }}</td>
+        <td class="px-6 py-3 text-right">
+          <a href="{% url 'client_edit' client.pk %}" class="text-xs text-gray-500 hover:text-gray-800 mr-3">Edit</a>
+          <a href="{% url 'client_delete' client.pk %}" class="text-xs text-red-500 hover:text-red-700">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="bg-white rounded-xl border border-gray-200 px-6 py-16 text-center text-gray-400 text-sm">
+  No clients yet.
+  <a href="{% url 'client_create' %}" class="text-blue-600 hover:underline">Add your first client →</a>
+</div>
+{% endif %}
+{% endblock %}
