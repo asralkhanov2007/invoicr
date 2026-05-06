@@ -26,7 +26,7 @@ class Invoice(models.Model):
     payment_terms = models.CharField(max_length=100, blank=True, default='Due on receipt')
     tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'), validators=[MinValueValidator(Decimal('0.00'))])
     stripe_session_id = models.CharField(max_length=255, blank=True)
-    stripe_payment_url = models.URLField(blank=True)
+    stripe_payment_url = models.URLField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

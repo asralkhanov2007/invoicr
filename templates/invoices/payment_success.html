@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Payment Received — Invoicr{% endblock %}
+{% block page_title %}Payment Received{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-xl border border-gray-200 p-8 text-center">
+  <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+    <svg class="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+  </div>
+  <h2 class="text-xl font-semibold text-gray-900 mb-2">Payment Successful</h2>
+  <p class="text-sm text-gray-500 mb-6">
+    Invoice <strong>{{ invoice.number }}</strong> has been paid.
+    Thank you!
+  </p>
+  <a href="{% url 'invoice_detail' invoice.pk %}"
+     class="inline-block bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+    View Invoice
+  </a>
+</div>
+{% endblock %}

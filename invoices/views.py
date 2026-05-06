@@ -7,6 +7,9 @@ from decimal import Decimal, InvalidOperation
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 import json, weasyprint
+import stripe
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 
 
 # Create your views here.
@@ -154,3 +157,98 @@ def invoice_pdf(request,pk):
     response['Content-Disposition'] = f'attachment; filename="invoice-{invoice.number}.pdf"'
     return response
 
+
+@login_required
+def invoice_checkout(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk, owner=request.user)
+
+    if invoice.status == Invoice.Status.PAID:
+        messages.info(request, 'This invoice is already paid.')
+        return redirect('invoice_detail', pk=pk)
+    
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    #Building line items for Stripe
+    line_items = []
+    for item in invoice.items.all():
+        line_items.append({
+            'price_data': {
+                'currency':'usd',
+                'unit_amount':int(item.unit_price * 100), # Stripe uses cents
+                'product_data': {
+                    'name':item.description,
+                },
+            },
+            'quantity':int(item.quantity),
+        })
+
+
+    # Add tax as a separate line item if applicable
+    if invoice.tax_rate:
+        line_items.append({
+            'price_data': {
+                'currency': 'usd',
+                'unit_amount': int(invoice.tax_amount * 100),
+                'product_data': {
+                    'name': f'Tax ({invoice.tax_rate}%)',
+                },
+            },
+            'quantity': 1,
+        })
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=line_items,
+        mode='payment',
+        success_url=request.build_absolute_uri(
+            f'/invoices/{pk}/payment-success/'
+        ),
+        cancel_url=request.build_absolute_uri(
+            f'/invoices/{pk}/'
+        ),
+        metadata={
+            'invoice_pk': pk,
+            'owner_id': request.user.id,
+        }
+    )
+
+    #Save session info on the invoice
+    invoice.stripe_session_id = session.id
+    invoice.stripe_payment_url = session.url
+    invoice.save()
+
+    return redirect(session.url)
+
+@login_required
+def payment_success(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk, owner=request.user)
+    # Status will be updated by webhook, but show success page regardless
+    return render(request, 'invoices/payment_success.html', {'invoice':invoice})
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except (ValueError, stripe.error.SignatureVerificationError):
+        return HttpResponse(status = 400)
+    
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        invoice_pk = session['metadata'].get('invoice_pk')
+
+        if invoice_pk:
+            try:
+                invoice = Invoice.objects.get(pk=invoice_pk)
+                invoice.status = Invoice.Status.PAID
+                invoice.save()
+
+            except Invoice.DoesNotExist:
+                pass
+
+    return HttpResponse(status = 200)

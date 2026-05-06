@@ -8,5 +8,8 @@ urlpatterns = [
     path('invoices/<int:pk>/edit/',views.invoice_edit,   name='invoice_edit'),
     path('invoices/<int:pk>/delete/',views.invoice_delete,  name='invoice_delete'),
     path('invoices/<int:pk>/status/',views.invoice_status,  name='invoice_status'),
-    path('invoices/<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf')
+    path('invoices/<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf'),
+    path('invoices/<int:pk>/checkout/', views.invoice_checkout, name='invoice_checkout'),
+    path('invoices/<int:pk>/payment-success/', views.payment_success, name='payment_success'),
+    path('invoices/webhook/', views.stripe_webhook, name='stripe_webhook'),
 ]
